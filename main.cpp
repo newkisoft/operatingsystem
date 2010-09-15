@@ -28,6 +28,29 @@ struct Jobs {
     int duration;
 };
 
+class General {
+public:
+
+    void Sort(Jobs alljobs[], int length) {
+        for (int i = 0; i < length; i++) {
+            for (int j = 0; j < length; j++) {
+                if (alljobs[i].startTime > alljobs[j].startTime) {
+                    Jobs temp;
+                    temp.duration = alljobs[i].duration;
+                    temp.name = alljobs[i].name;
+                    temp.startTime = alljobs[i].startTime;
+                    alljobs[i].duration = alljobs[j].duration;
+                    alljobs[i].name = alljobs[j].name;
+                    alljobs[i].startTime = alljobs[j].startTime;
+                    alljobs[i].duration = temp.duration;
+                    alljobs[i].name = temp.name;
+                    alljobs[i].startTime = temp.startTime;
+                }
+
+            }
+        }
+    }
+};
 class FileTransfer {
 public:
 
@@ -68,134 +91,126 @@ public:
     }
 };
 
-class Analysis {
+class Analysis : public General {
 public:
     int numberOfLines;
 public:
- Analysis() {
-   
+
+    Analysis() {
+
     }
 public:
 
     int StringToDigit(string number) {
-        numberOfLines= atoi(number.c_str());
+        numberOfLines = atoi(number.c_str());
         return numberOfLines;
     }
 public:
-    bool isCharacter(char c)
-    {
-        if((c>'a'&& c<'z') ||(c>'A' && c<'Z'))
+
+    bool isCharacter(char c) {
+        if ((c > 'a' && c < 'z') || (c > 'A' && c < 'Z'))
             return true;
         else
             return false;
     }
 public:
-    string findVariableName(string fullString)
-    {
-        int cnt=2;
-        string result="";
-        while(!isCharacter(fullString[cnt])) cnt++;
-        while(isCharacter(fullString[cnt]))
-        {
-            result+=fullString[cnt];
+
+    string findVariableName(string fullString) {
+        int cnt = 2;
+        string result = "";
+        while (!isCharacter(fullString[cnt])) cnt++;
+        while (isCharacter(fullString[cnt])) {
+            result += fullString[cnt];
             cnt++;
         }
         return result;
     }
 public:
-    int findVariableValue(string fullString)
-    {
-        int cnt=0;
-        string result="";
-        for(cnt=2;cnt<fullString.length();cnt++)
-        {
-            if(fullString[cnt]=='<'){
+
+    int findVariableValue(string fullString) {
+        int cnt = 0;
+        string result = "";
+        for (cnt = 2; cnt < fullString.length(); cnt++) {
+            if (fullString[cnt] == '<') {
                 cnt++;
                 break;
             }
         }
-        while(fullString[cnt]==' ') cnt++;
-        while(isdigit(fullString[cnt]))
-        {
-            result+=fullString[cnt];
+        while (fullString[cnt] == ' ') cnt++;
+        while (isdigit(fullString[cnt])) {
+            result += fullString[cnt];
             cnt++;
         }
         return StringToDigit(result);
     }
-public: int findLine(string fullString)
-{
-        int cnt=0;
-        string result="";
-        for(cnt=2;cnt<fullString.length();cnt++)
-        {
-            if(fullString[cnt]=='g' && fullString[cnt+1]=='o' && fullString[cnt+2]=='t'
-                    && fullString[cnt+3]=='o'){
-                cnt+=4;
+public:
+
+    int findLine(string fullString) {
+        int cnt = 0;
+        string result = "";
+        for (cnt = 2; cnt < fullString.length(); cnt++) {
+            if (fullString[cnt] == 'g' && fullString[cnt + 1] == 'o' && fullString[cnt + 2] == 't'
+                    && fullString[cnt + 3] == 'o') {
+                cnt += 4;
                 break;
             }
         }
-        while(fullString[cnt]==' ') cnt++;
-        while(isdigit(fullString[cnt]))
-        {
-            result+=fullString[cnt];
+        while (fullString[cnt] == ' ') cnt++;
+        while (isdigit(fullString[cnt])) {
+            result += fullString[cnt];
             cnt++;
         }
         return StringToDigit(result);
-}
+    }
 public:
-    int variableIndex(string variables[],string variable)
-    {
-        int index=-1;
-        for(int i=0;i<MAXNUMBEROFVARIABLES;i++)
-        {
-            if(variables[i]=="") break;
-            if(strcasecmp(variables[i].c_str(),variable.c_str())==0)
+
+    int variableIndex(string variables[], string variable) {
+        int index = -1;
+        for (int i = 0; i < MAXNUMBEROFVARIABLES; i++) {
+            if (variables[i] == "") break;
+            if (strcasecmp(variables[i].c_str(), variable.c_str()) == 0)
                 return i;
         }
         return index;
     }
 public:
-    void initialize(int *variable)
-    {
-        for(int i=0;i<MAXNUMBEROFVARIABLES;i++)
-            variable[i]=0;
+
+    void initialize(int *variable) {
+        for (int i = 0; i < MAXNUMBEROFVARIABLES; i++)
+            variable[i] = 0;
     }
 public:
-    int CalculateTime(string fileName)
-    {
+
+    int CalculateTime(string fileName) {
         string variableName[MAXNUMBEROFVARIABLES];
         string name;
-        int variableValue[MAXNUMBEROFVARIABLES];     
-        int cnt=0;
-        int time=0;
-        int index=0;
-        int j=0;
+        int variableValue[MAXNUMBEROFVARIABLES];
+        int cnt = 0;
+        int time = 0;
+        int index = 0;
+        int j = 0;
         int value;
         string content[MAXLINENUMBER];
         initialize(variableValue);
         FileTransfer file;
-        file.ReadFile(fileName,content);
-        while(content[cnt]!="")
-        {
-            if(content[cnt][0]=='i' && content[cnt][1]=='f'){
-                name=findVariableName(content[cnt]);
-                value=findVariableValue(content[cnt]);
-                index=variableIndex(variableName,name);
-                if(index==-1)
-                {
-                    variableName[j]=name;
+        file.ReadFile(fileName, content);
+        while (content[cnt] != "") {
+            if (content[cnt][0] == 'i' && content[cnt][1] == 'f') {
+                name = findVariableName(content[cnt]);
+                value = findVariableValue(content[cnt]);
+                index = variableIndex(variableName, name);
+                if (index == -1) {
+                    variableName[j] = name;
                     variableValue[j]++;
-                    index=j;
+                    index = j;
                     j++;
-                }else
-                {
+                } else {
                     variableValue[index]++;
                 }
-                if(variableValue[index]<value)
-                    cnt=findLine(content[cnt]);
-                else
-                {
-                    variableValue[index]=-1;
+                if (variableValue[index] < value)
+                    cnt = findLine(content[cnt]);
+                else {
+                    variableValue[index] = -1;
                 }
             }
             time++;
@@ -203,38 +218,39 @@ public:
         }
         return time;
     }
-
- 
-};
-class General
-{
 public:
-   void Sort(Jobs alljobs[],int length)
-    {
-        for(int i=0;i<length;i++)
-        {
-            for(int j=0;j<length;j++)
-            {
-                if(alljobs[i].startTime > alljobs[j].startTime){
-                    Jobs temp;
-                    temp.duration=alljobs[i].duration;
-                    temp.name=alljobs[i].name;
-                    temp.startTime=alljobs[i].startTime;
-                    alljobs[i].duration=alljobs[j].duration;
-                    alljobs[i].name=alljobs[j].name;
-                    alljobs[i].startTime=alljobs[j].startTime;
-                    alljobs[i].duration=temp.duration;
-                    alljobs[i].name=temp.name;
-                    alljobs[i].startTime=temp.startTime;
-                }
 
-            }
+    void FCFS(Jobs *alljobs, string *output, int numberOfJobs) {
+        queue<Jobs> q;
+        General general;
+        int cnt;
+        general.Sort(alljobs, cnt);
+        for (int i = 0; i < numberOfJobs; i++) {
+            q.push(alljobs[i]);
         }
+        stringstream out;
+        cnt = 0;
+        while (!q.empty()) {
+            out.clear();
+            out.str("");
+            Jobs job;
+            job = q.front();
+            out << job.duration;
+            output[cnt] = job.name + "," + out.str();
+            cout << output << "\n";
+            q.pop();
+            cnt++;
+        }        
     }
+
+
 };
+
+
+
 int main(int argc, char** argv) {
     string temp;
-    int numberOfJobs=0;
+    int numberOfJobs = 0;
     int cnt = 0;
     Jobs alljobs[400];
     queue<Jobs> q;
@@ -244,38 +260,20 @@ int main(int argc, char** argv) {
     string files[MAXLINENUMBER];
     string result[MAXLINENUMBER];
     string output[MAXLINENUMBER];
-    if(argv[2]="") argv[2]="in.file";
+    if (argv[2] = "") argv[2] = "in.file";
     filetransfer.ReadFile(argv[2], files);
     while (files[cnt] != "") {
-        temp = files[cnt];        
+        temp = files[cnt];
         filetransfer.ReadFile(temp, result);
         Jobs job;
-        job.name = files[cnt];        
+        job.name = files[cnt];
         job.startTime = analysis.StringToDigit(result[0]);
-        job.duration= analysis.CalculateTime(files[cnt]);
-        alljobs[cnt]=job;
-        q.push(job);
+        job.duration = analysis.CalculateTime(files[cnt]);
+        alljobs[cnt] = job;
         cnt++;
         numberOfJobs++;
     }
-    general.Sort(alljobs,cnt);
-    for(int i=0;i<numberOfJobs;i++)
-    {
-        q.push(alljobs[i]);
-    }
-    stringstream out;
-    cnt = 0;
-    while (!q.empty()) {
-        out.clear();
-        out.str("");
-        Jobs job;
-        job = q.front();
-        out << job.duration;
-        output[cnt] = job.name + "," + out.str();
-        cout << output << "\n";
-        q.pop();
-        cnt++;
-    }
+    analysis.FCFS(alljobs,output,numberOfJobs);
     filetransfer.WriteFile("write", output, cnt);
     return 0;
 }
