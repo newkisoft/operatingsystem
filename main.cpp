@@ -275,10 +275,13 @@ public:
                 q.push(job);
             else
             {
-                output[cnt]=job.name +" "+job.output;
+                out.clear();
+                out.str("");
+                out << job.startTime;
+                output[cnt]=job.name +" "+out.str()+" "+job.output;
                 cnt++;
             }
-            totalTime++;
+            
         }
     }
 
