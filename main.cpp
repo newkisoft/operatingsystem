@@ -26,31 +26,30 @@ struct Jobs {
     string name;
     int startTime;
     int duration;
+    string output;
 };
 
 class General {
 public:
 
     void Sort(Jobs alljobs[], int length) {
-        for (int i = 0; i < length; i++) {
+        int flag =1;
+        for (int i = 0; i < length && flag; i++) {
             for (int j = 0; j < length; j++) {
-                if (alljobs[i].startTime > alljobs[j].startTime) {
+                flag=0;
+                if (alljobs[j+1].startTime > alljobs[j].startTime) {
                     Jobs temp;
-                    temp.duration = alljobs[i].duration;
-                    temp.name = alljobs[i].name;
-                    temp.startTime = alljobs[i].startTime;
-                    alljobs[i].duration = alljobs[j].duration;
-                    alljobs[i].name = alljobs[j].name;
-                    alljobs[i].startTime = alljobs[j].startTime;
-                    alljobs[i].duration = temp.duration;
-                    alljobs[i].name = temp.name;
-                    alljobs[i].startTime = temp.startTime;
+                    temp=alljobs[j];
+                    alljobs[j]=alljobs[j+1];
+                    alljobs[j+1]=temp;
+                    flag=1;
                 }
 
             }
         }
     }
 };
+
 class FileTransfer {
 public:
 
@@ -213,6 +212,7 @@ public:
                     variableValue[index] = -1;
                 }
             }
+
             time++;
             cnt++;
         }
@@ -224,7 +224,7 @@ public:
         queue<Jobs> q;
         General general;
         int cnt;
-        general.Sort(alljobs, cnt);
+        general.Sort(alljobs, numberOfJobs);
         for (int i = 0; i < numberOfJobs; i++) {
             q.push(alljobs[i]);
         }
@@ -240,28 +240,76 @@ public:
             cout << output << "\n";
             q.pop();
             cnt++;
-        }        
+        }
     }
 
+public:
+
+    void RR(Jobs *alljobs, string *output, int numberOfJobs, int quantom) {
+        queue<Jobs> q;
+        int totalTime;
+        General general;
+        int cnt=0;
+        general.Sort(alljobs, numberOfJobs);
+        for (int i = numberOfJobs-1; i >= 0; i--) {
+            q.push(alljobs[i]);
+        }
+        totalTime = alljobs[numberOfJobs-1].startTime;
+        stringstream out;
+        cnt = 0;
+        while (!q.empty()) {
+            out.clear();
+            out.str("");
+            Jobs job;
+            job = q.front();
+            if (job.startTime <= totalTime) {
+                if (job.duration > 0) {
+                    totalTime += quantom;
+                    job.duration -= 2;
+                    out << totalTime;
+                    job.output = job.output + " " + out.str();
+                }
+            }
+            q.pop();
+            if(job.duration>0)
+                q.push(job);
+            else
+            {
+                output[cnt]=job.name +" "+job.output;
+                cnt++;
+            }
+            totalTime++;
+        }
+    }
 
 };
-
-
 
 int main(int argc, char** argv) {
     string temp;
     int numberOfJobs = 0;
     int cnt = 0;
+    int quantum = 0;
+    argv[1]="RR";
+    argv[2]="2";
+    argv[3]="in.file";
+
     Jobs alljobs[400];
-    queue<Jobs> q;
     FileTransfer filetransfer;
-    General general;
     Analysis analysis;
     string files[MAXLINENUMBER];
     string result[MAXLINENUMBER];
     string output[MAXLINENUMBER];
-    if (argv[2] = "") argv[2] = "in.file";
-    filetransfer.ReadFile(argv[2], files);
+    if (argv[2] == "") {
+        argv[2] = "in.file";
+        argv[1] = "FCFS";
+    }
+
+    if (argv[1] == "FCFS") {
+        filetransfer.ReadFile(argv[2], files);
+    } else if (argv[1] == "RR") {
+        quantum = analysis.StringToDigit(argv[2]);
+        filetransfer.ReadFile(argv[3], files);
+    }
     while (files[cnt] != "") {
         temp = files[cnt];
         filetransfer.ReadFile(temp, result);
@@ -273,7 +321,10 @@ int main(int argc, char** argv) {
         cnt++;
         numberOfJobs++;
     }
-    analysis.FCFS(alljobs,output,numberOfJobs);
+    if(argv[1]=="FCFS")
+        analysis.FCFS(alljobs, output, numberOfJobs);
+    else if(argv[1]=="RR")
+        analysis.RR(alljobs, output, numberOfJobs,quantum);
     filetransfer.WriteFile("write", output, cnt);
     return 0;
 }
