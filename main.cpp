@@ -22,10 +22,31 @@ using namespace std;
 static int MAXLINENUMBER = 200;
 static int MAXNUMBEROFVARIABLES = 100;
 
+struct CacheMemory {
+    string content[4];
+public:
+
+    int indexOf(string line) {
+        for (int index = 0; index < 4; index++)
+            if (line == content[4])
+                return index;
+    }
+};
+struct Page{
+    string lines[2];
+};
+struct Frame{
+    Page pages[2];
+};
+struct MainMemory{
+    Frame frames[8];
+};
 struct Jobs {
     string name;
     int startTime;
     int duration;
+    int numberOfLines;
+    int memoryNeed;
     string output;
 };
 
@@ -33,16 +54,16 @@ class General {
 public:
 
     void Sort(Jobs alljobs[], int length) {
-        int flag =1;
+        int flag = 1;
         for (int i = 0; i < length && flag; i++) {
             for (int j = 0; j < length; j++) {
-                flag=0;
-                if (alljobs[j+1].startTime > alljobs[j].startTime) {
+                flag = 0;
+                if (alljobs[j + 1].startTime > alljobs[j].startTime) {
                     Jobs temp;
-                    temp=alljobs[j];
-                    alljobs[j]=alljobs[j+1];
-                    alljobs[j+1]=temp;
-                    flag=1;
+                    temp = alljobs[j];
+                    alljobs[j] = alljobs[j + 1];
+                    alljobs[j + 1] = temp;
+                    flag = 1;
                 }
 
             }
@@ -53,7 +74,7 @@ public:
 class FileTransfer {
 public:
 
-    void ReadFile(string filename, string content[]) {
+    int ReadFile(string filename, string content[]) {
 
         ifstream inFile;
         int lineNumber = 0;
@@ -75,6 +96,7 @@ public:
             inFile.close();
             cout << "File has been read, will be analysed!\n";
         }
+        return lineNumber;
     }
 public:
 
@@ -92,8 +114,6 @@ public:
 
 class Analysis : public General {
 public:
-    int numberOfLines;
-public:
 
     Analysis() {
 
@@ -101,8 +121,9 @@ public:
 public:
 
     int StringToDigit(string number) {
-        numberOfLines = atoi(number.c_str());
-        return numberOfLines;
+        int temp;
+        temp = atoi(number.c_str());
+        return temp;
     }
 public:
 
@@ -220,6 +241,15 @@ public:
     }
 public:
 
+    int calculateMemoryNeed(int numberOfLines) {
+        int temp = numberOfLines % 2;
+        if (temp == 0)
+            return numberOfLines / 2;
+        else
+            return (numberOfLines / 2) + 1;
+    }
+public:
+
     void FCFS(Jobs *alljobs, string *output, int numberOfJobs) {
         queue<Jobs> q;
         General general;
@@ -249,12 +279,12 @@ public:
         queue<Jobs> q;
         int totalTime;
         General general;
-        int cnt=0;
+        int cnt = 0;
         general.Sort(alljobs, numberOfJobs);
-        for (int i = numberOfJobs-1; i >= 0; i--) {
+        for (int i = numberOfJobs - 1; i >= 0; i--) {
             q.push(alljobs[i]);
         }
-        totalTime = alljobs[numberOfJobs-1].startTime;
+        totalTime = alljobs[numberOfJobs - 1].startTime;
         stringstream out;
         cnt = 0;
         while (!q.empty()) {
@@ -271,17 +301,16 @@ public:
                 }
             }
             q.pop();
-            if(job.duration>0)
+            if (job.duration > 0)
                 q.push(job);
-            else
-            {
+            else {
                 out.clear();
                 out.str("");
                 out << job.startTime;
-                output[cnt]=job.name +" "+out.str()+" "+job.output;
+                output[cnt] = job.name + " " + out.str() + " " + job.output;
                 cnt++;
             }
-            
+
         }
     }
 
@@ -289,12 +318,13 @@ public:
 
 int main(int argc, char** argv) {
     string temp;
+    CacheMemory cache;
     int numberOfJobs = 0;
     int cnt = 0;
     int quantum = 0;
-    argv[1]="RR";
-    argv[2]="2";
-    argv[3]="in.file";
+    argv[1] = "RR";
+    argv[2] = "2";
+    argv[3] = "in.file";
 
     Jobs alljobs[400];
     FileTransfer filetransfer;
@@ -315,19 +345,20 @@ int main(int argc, char** argv) {
     }
     while (files[cnt] != "") {
         temp = files[cnt];
-        filetransfer.ReadFile(temp, result);
         Jobs job;
+        job.numberOfLines = filetransfer.ReadFile(temp, result);
         job.name = files[cnt];
         job.startTime = analysis.StringToDigit(result[0]);
         job.duration = analysis.CalculateTime(files[cnt]);
+        job.memoryNeed = analysis.calculateMemoryNeed(job.numberOfLines);
         alljobs[cnt] = job;
         cnt++;
         numberOfJobs++;
     }
-    if(argv[1]=="FCFS")
+    if (argv[1] == "FCFS")
         analysis.FCFS(alljobs, output, numberOfJobs);
-    else if(argv[1]=="RR")
-        analysis.RR(alljobs, output, numberOfJobs,quantum);
+    else if (argv[1] == "RR")
+        analysis.RR(alljobs, output, numberOfJobs, quantum);
     filetransfer.WriteFile("write", output, cnt);
     return 0;
 }
