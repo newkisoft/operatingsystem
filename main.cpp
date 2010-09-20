@@ -32,15 +32,46 @@ public:
                 return index;
     }
 };
-struct Page{
+
+struct Page {
     string lines[2];
 };
-struct Frame{
+
+struct Frame {
     Page pages[2];
 };
-struct MainMemory{
+
+struct MainMemory {
     Frame frames[8];
+public:
+void setMemory(string content[], int position, int numberOfLines) {
+        int lineCnt = 0;
+        int pageCnt = 0;
+        int p = position;
+        int frameCnt = 0;
+
+        for (int j = 0; j < numberOfLines; j++) {
+            frames[frameCnt].pages[pageCnt].lines[lineCnt] = content[p];
+            lineCnt++;
+            if (lineCnt == 2) {
+                lineCnt = 0;
+                pageCnt++;
+                if (pageCnt == 2) {
+                    pageCnt = 0;
+                    frameCnt++;
+                    if (frameCnt > 8) {
+                        cout << "could not fit all of them in memory!";
+                        break;
+                    }
+
+                }
+            }
+            p--;
+        }
+
+    }
 };
+
 struct Jobs {
     string name;
     int startTime;
@@ -204,6 +235,7 @@ public:
     int CalculateTime(string fileName) {
         string variableName[MAXNUMBEROFVARIABLES];
         string name;
+        MainMemory mainMemory;
         int variableValue[MAXNUMBEROFVARIABLES];
         int cnt = 0;
         int time = 0;
@@ -214,7 +246,10 @@ public:
         initialize(variableValue);
         FileTransfer file;
         file.ReadFile(fileName, content);
+        MainMemory memory;
+        memory.setMemory(content,4,4);
         while (content[cnt] != "") {
+
             if (content[cnt][0] == 'i' && content[cnt][1] == 'f') {
                 name = findVariableName(content[cnt]);
                 value = findVariableValue(content[cnt]);
