@@ -22,18 +22,19 @@ using namespace std;
 static int MAXLINENUMBER = 200;
 static int MAXNUMBEROFVARIABLES = 100;
 
-struct LinePosition{
-    int frameNumber;
-    int pageNumber;
-    int lineNumber;
-    void initialize(){
-        frameNumber=-1;
-        pageNumber=-1;
-        lineNumber=-1;
+struct CacheMemory {
+    string content[4];
+public:
+
+    int indexOf(string line) {
+        for (int index = 0; index < 4; index++)
+            if (line == content[4])
+                return index;
     }
 };
+
 struct Page {
-    string lines[1];
+    string lines[2];
 };
 
 struct Frame {
@@ -43,8 +44,7 @@ struct Frame {
 struct MainMemory {
     Frame frames[8];
 public:
-
-    void setMemory(string content[], int position, int numberOfLines) {
+void setMemory(string content[], int position, int numberOfLines) {
         int lineCnt = 0;
         int pageCnt = 0;
         int p = position;
@@ -56,7 +56,7 @@ public:
             if (lineCnt == 2) {
                 lineCnt = 0;
                 pageCnt++;
-                if (pageCnt == 1) {
+                if (pageCnt == 2) {
                     pageCnt = 0;
                     frameCnt++;
                     if (frameCnt > 8) {
@@ -69,63 +69,6 @@ public:
             p--;
         }
 
-    }
-    LinePosition findLine(string line){
-        LinePosition linePosition;
-        linePosition.initialize();
-        for(int i=0;i<8;i++){
-            for(int j=0;j<2;j++){
-                for(int k=0;k<2;k++){
-                    if(line==frames[i].pages[j].lines[k]){
-                        linePosition.frameNumber=i;
-                        linePosition.pageNumber=j;
-                        linePosition.lineNumber=k;
-                    }
-                }
-            }
-        }
-        return linePosition;
-    }
-};
-
-struct CacheMemory {
-    Page pages[2];
-
-    void setMemory(string content[], int position, int numberOfLines) {
-        int lineCnt = 0;
-        int pageCnt = 0;
-        int p = position;
-
-        for (int j = 0; j < numberOfLines; j++) {
-            pages[pageCnt].lines[lineCnt] = content[p];
-            lineCnt++;
-            if (lineCnt == 2) {
-                lineCnt = 0;
-                pageCnt++;
-                if (pageCnt > 2) {
-                    cout << "could not fit all of them in chache memory!";
-                    break;
-
-                }
-            }
-            p--;
-        }
-
-    }
-public:
-
-    LinePosition indexOf(string line) {
-        LinePosition linePosition;
-        linePosition.initialize();
-        for (int i = 0; i < 4; i++){
-            for(int j =0;j<1;j++)
-                if (line == pages[i].lines[j]){
-                    linePosition.lineNumber=j;
-                    linePosition.pageNumber=i;
-                    return linePosition;
-                }
-        }
-        return linePosition;
     }
 };
 
@@ -304,7 +247,7 @@ public:
         FileTransfer file;
         file.ReadFile(fileName, content);
         MainMemory memory;
-        memory.setMemory(content, 4, 4);
+        memory.setMemory(content,4,4);
         while (content[cnt] != "") {
 
             if (content[cnt][0] == 'i' && content[cnt][1] == 'f') {
@@ -409,7 +352,8 @@ public:
 };
 
 int main(int argc, char** argv) {
-    string temp;  
+    string temp;
+    CacheMemory cache;
     int numberOfJobs = 0;
     int cnt = 0;
     int quantum = 0;
