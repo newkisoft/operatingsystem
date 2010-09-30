@@ -19,22 +19,24 @@ using namespace std;
 /*
  *
  */
-static int MAXLINENUMBER = 200;
-static int MAXNUMBEROFVARIABLES = 100;
+static const int MAXLINENUMBER = 200;
+static const int MAXNUMBEROFVARIABLES = 100;
+static const int MAXJOBSNUMBER = 400;
 
-struct CacheMemory {
-    string content[4];
-public:
+struct LinePosition {
+    int frameNumber;
+    int pageNumber;
+    int lineNumber;
 
-    int indexOf(string line) {
-        for (int index = 0; index < 4; index++)
-            if (line == content[4])
-                return index;
+    void initialize() {
+        frameNumber = -1;
+        pageNumber = -1;
+        lineNumber = -1;
     }
 };
 
 struct Page {
-    string lines[2];
+    string lines[1];
 };
 
 struct Frame {
@@ -43,23 +45,42 @@ struct Frame {
 
 struct MainMemory {
     Frame frames[8];
+    String name[8];
 public:
-void setMemory(string content[], int position, int numberOfLines) {
+
+    int findEmptyFrame() {
+        int index = -1;
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 1; j++)
+                for (int k = 0; k < 2; k++)
+                    if (frames[i].pages[j].lines[k] == "" && k == 0) {
+                        index = i;
+                        break;
+                    }
+
+        }
+        return index;
+    }
+
+public:
+
+    void setMemory(string jobName, string content[], int position, int numberOfLines) {
         int lineCnt = 0;
         int pageCnt = 0;
         int p = position;
-        int frameCnt = 0;
-
+        int frameNumber = -1;
+        frameNumber=findEmptyFrame();
+        
         for (int j = 0; j < numberOfLines; j++) {
-            frames[frameCnt].pages[pageCnt].lines[lineCnt] = content[p];
+            frames[frameNumber].pages[pageCnt].lines[lineCnt] = content[p];
             lineCnt++;
             if (lineCnt == 2) {
                 lineCnt = 0;
                 pageCnt++;
-                if (pageCnt == 2) {
+                if (pageCnt == 1) {
                     pageCnt = 0;
-                    frameCnt++;
-                    if (frameCnt > 8) {
+                    frameNumber++;
+                    if (frameNumber > 8) {
                         cout << "could not fit all of them in memory!";
                         break;
                     }
@@ -69,6 +90,64 @@ void setMemory(string content[], int position, int numberOfLines) {
             p--;
         }
 
+    }
+
+    LinePosition findLine(string line) {
+        LinePosition linePosition;
+        linePosition.initialize();
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 2; j++) {
+                for (int k = 0; k < 2; k++) {
+                    if (line == frames[i].pages[j].lines[k]) {
+                        linePosition.frameNumber = i;
+                        linePosition.pageNumber = j;
+                        linePosition.lineNumber = k;
+                    }
+                }
+            }
+        }
+        return linePosition;
+    }
+};
+
+struct CacheMemory {
+    Page pages[2];
+
+    void setMemory(string content[], int position, int numberOfLines) {
+        int lineCnt = 0;
+        int pageCnt = 0;
+        int p = position;
+
+        for (int j = 0; j < numberOfLines; j++) {
+            pages[pageCnt].lines[lineCnt] = content[p];
+            lineCnt++;
+            if (lineCnt == 2) {
+                lineCnt = 0;
+                pageCnt++;
+                if (pageCnt > 2) {
+                    cout << "could not fit all of them in chache memory!";
+                    break;
+
+                }
+            }
+            p--;
+        }
+
+    }
+public:
+
+    LinePosition indexOf(string line) {
+        LinePosition linePosition;
+        linePosition.initialize();
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 1; j++)
+                if (line == pages[i].lines[j]) {
+                    linePosition.lineNumber = j;
+                    linePosition.pageNumber = i;
+                    return linePosition;
+                }
+        }
+        return linePosition;
     }
 };
 
@@ -81,7 +160,48 @@ struct Jobs {
     string output;
 };
 
+struct MemoryJobs {
+    string name;
+    int startTime;
+    int numberOfLines;
+    string content[MAXLINENUMBER];
+    string output;
+    string variableName[MAXNUMBEROFVARIABLES];
+    int variableValue[MAXNUMBEROFVARIABLES];
+    int currentLine;
+    int numberOfVariables;
+public:
+
+    void initializer() {
+        startTime = 0;
+        name = "";
+        output = "";
+        currentLine = 0;
+        numberOfVariables = 0;
+        numberOfLines = 0;
+
+    }
+};
+
 class General {
+public:
+
+    void Sort(MemoryJobs alljobs[], int length) {
+        int flag = 1;
+        for (int i = 0; i < length && flag; i++) {
+            for (int j = 0; j < length; j++) {
+                flag = 0;
+                if (alljobs[j + 1].startTime > alljobs[j].startTime) {
+                    MemoryJobs temp;
+                    temp = alljobs[j];
+                    alljobs[j] = alljobs[j + 1];
+                    alljobs[j + 1] = temp;
+                    flag = 1;
+                }
+
+            }
+        }
+    }
 public:
 
     void Sort(Jobs alljobs[], int length) {
@@ -98,6 +218,28 @@ public:
                 }
 
             }
+        }
+    }
+public:
+
+    int findIndex(string content[], string line) {
+        int index = -1;
+        int i = 0;
+        while (content[i] != "") {
+            if (line == content[i]) {
+                index = i;
+                break;
+            }
+        }
+        return index;
+    }
+public:
+
+    void getLines(string content[], int start, int numberOfLines, string result[]) {
+        int j = 0;
+        for (int i = start; i < numberOfLines; i++) {
+            result[j] = content[i];
+            j++;
         }
     }
 };
@@ -235,7 +377,6 @@ public:
     int CalculateTime(string fileName) {
         string variableName[MAXNUMBEROFVARIABLES];
         string name;
-        MainMemory mainMemory;
         int variableValue[MAXNUMBEROFVARIABLES];
         int cnt = 0;
         int time = 0;
@@ -246,10 +387,7 @@ public:
         initialize(variableValue);
         FileTransfer file;
         file.ReadFile(fileName, content);
-        MainMemory memory;
-        memory.setMemory(content,4,4);
         while (content[cnt] != "") {
-
             if (content[cnt][0] == 'i' && content[cnt][1] == 'f') {
                 name = findVariableName(content[cnt]);
                 value = findVariableValue(content[cnt]);
@@ -307,15 +445,100 @@ public:
             cnt++;
         }
     }
+    // if memory has been used this function should be called;
+public:
 
+    void RR(MemoryJobs *alljobs, string *output, int numberOfJobs, int quantom) {
+        queue<MemoryJobs> q;
+        int totalTime = 0;
+        string name;
+        int index;
+        int value;
+        int cnt = 0;
+        int qcounter = 0;
+
+        MemoryJobs job;
+        job.initializer();
+        stringstream out;
+        Sort(alljobs, numberOfJobs);
+        MainMemory memory;
+        CacheMemory cache;
+        for (int i = numberOfJobs - 1; i >= 0; i--) {
+            q.push(alljobs[i]);
+        }
+        totalTime = alljobs[numberOfJobs - 1].startTime;
+        while (!q.empty()) {
+            out.clear();
+            out.str("");
+            if (qcounter == 0) {
+                job = q.front();
+            }
+            if (job.startTime <= totalTime) {
+                if (job.content[job.currentLine][0] == 'i' &&
+                        job.content[job.currentLine][1] == 'f') {
+                    name = findVariableName(job.content[job.currentLine]);
+                    value = findVariableValue(job.content[job.currentLine]);
+                    index = variableIndex(job.variableName, name);
+                    if (index == -1) {
+                        job.variableName[job.numberOfVariables] = name;
+                        job.variableValue[job.numberOfVariables]++;
+                        index = job.numberOfVariables;
+                        job.numberOfVariables++;
+                    } else {
+                        job.variableValue[index]++;
+                    }
+                    if (job.variableValue[index] < value)
+                        job.currentLine = findLine(job.content[job.currentLine]);
+                    else {
+                        job.variableValue[index] = -1;
+                    }
+                }
+                totalTime++;
+
+                if (qcounter == 0)
+                    q.pop();
+                if (job.currentLine >= job.numberOfLines) {
+                    out.clear();
+                    out.str("");
+                    out << job.startTime;
+                    output[cnt] = job.name + " " + out.str() + " " + job.output;
+                    cout << "\n--------------------------------------\n";
+                    cout << output[cnt];
+                    cnt++;
+                } else {
+                    job.currentLine++;
+                }
+                if ((qcounter >= (quantom - 1))) {
+                    qcounter = -1;
+                    out.clear();
+                    out.str("");
+                    out << totalTime;
+                    job.output = job.output + " " + out.str();
+                    if (job.currentLine < job.numberOfLines)
+                        q.push(job);
+                }
+                qcounter++;
+            } else {
+                q.pop();
+                q.push(job);
+            }
+        }
+        out.clear();
+        out.str("");
+        out << job.startTime;
+        output[cnt] = job.name + " " + out.str() + " " + job.output;
+        cout << "\n--------------------------------------\n";
+        cout << output[cnt];
+
+    }
+    //without memory and cache
 public:
 
     void RR(Jobs *alljobs, string *output, int numberOfJobs, int quantom) {
         queue<Jobs> q;
         int totalTime;
-        General general;
         int cnt = 0;
-        general.Sort(alljobs, numberOfJobs);
+        Sort(alljobs, numberOfJobs);
         for (int i = numberOfJobs - 1; i >= 0; i--) {
             q.push(alljobs[i]);
         }
@@ -353,15 +576,16 @@ public:
 
 int main(int argc, char** argv) {
     string temp;
-    CacheMemory cache;
     int numberOfJobs = 0;
     int cnt = 0;
+    bool memory = true;
     int quantum = 0;
     argv[1] = "RR";
     argv[2] = "2";
     argv[3] = "in.file";
 
-    Jobs alljobs[400];
+    Jobs alljobs[MAXJOBSNUMBER];
+    MemoryJobs memoryJobs[MAXJOBSNUMBER];
     FileTransfer filetransfer;
     Analysis analysis;
     string files[MAXLINENUMBER];
@@ -378,22 +602,41 @@ int main(int argc, char** argv) {
         quantum = analysis.StringToDigit(argv[2]);
         filetransfer.ReadFile(argv[3], files);
     }
-    while (files[cnt] != "") {
-        temp = files[cnt];
-        Jobs job;
-        job.numberOfLines = filetransfer.ReadFile(temp, result);
-        job.name = files[cnt];
-        job.startTime = analysis.StringToDigit(result[0]);
-        job.duration = analysis.CalculateTime(files[cnt]);
-        job.memoryNeed = analysis.calculateMemoryNeed(job.numberOfLines);
-        alljobs[cnt] = job;
-        cnt++;
-        numberOfJobs++;
+    if (memory) {
+        while (files[cnt] != "") {
+            temp = files[cnt];
+            MemoryJobs memoryJob;
+            memoryJob.numberOfLines = filetransfer.ReadFile(temp, memoryJob.content);
+            memoryJob.name = files[cnt];
+            memoryJob.startTime = analysis.StringToDigit(memoryJob.content[0]);
+            memoryJobs[cnt] = memoryJob;
+            cnt++;
+            numberOfJobs++;
+        }
+        if (argv[1] == "FCFS")
+            analysis.FCFS(alljobs, output, numberOfJobs);
+        else if (argv[1] == "RR")
+            analysis.RR(memoryJobs, output, numberOfJobs, quantum);
+        filetransfer.WriteFile("write", output, cnt);
+
+    } else {
+        while (files[cnt] != "") {
+            temp = files[cnt];
+            Jobs job;
+            job.numberOfLines = filetransfer.ReadFile(temp, result);
+            job.name = files[cnt];
+            job.startTime = analysis.StringToDigit(result[0]);
+            job.duration = analysis.CalculateTime(files[cnt]);
+            job.memoryNeed = analysis.calculateMemoryNeed(job.numberOfLines);
+            alljobs[cnt] = job;
+            cnt++;
+            numberOfJobs++;
+        }
+        if (argv[1] == "FCFS")
+            analysis.FCFS(alljobs, output, numberOfJobs);
+        else if (argv[1] == "RR")
+            analysis.RR(alljobs, output, numberOfJobs, quantum);
+        filetransfer.WriteFile("write", output, cnt);
     }
-    if (argv[1] == "FCFS")
-        analysis.FCFS(alljobs, output, numberOfJobs);
-    else if (argv[1] == "RR")
-        analysis.RR(alljobs, output, numberOfJobs, quantum);
-    filetransfer.WriteFile("write", output, cnt);
     return 0;
 }
