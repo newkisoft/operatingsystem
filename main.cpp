@@ -36,16 +36,42 @@ struct LinePosition {
 };
 
 struct Page {
-    string lines[1];
+    string lines[2];
 };
 
 struct Frame {
     Page pages[2];
 };
 
+struct MemoryJobs {
+    string name;
+    int startTime;
+    int numberOfLines;
+    string content[MAXLINENUMBER];
+    string output;
+    string variableName[MAXNUMBEROFVARIABLES];
+    int variableValue[MAXNUMBEROFVARIABLES];
+    int currentLine;
+    int numberOfVariables;
+    int lastUsedTime;
+    bool pagefault;
+public:
+
+    void initializer() {
+        startTime = 0;
+        name = "";
+        output = "";
+        currentLine = 0;
+        numberOfVariables = 0;
+        numberOfLines = 0;
+        lastUsedTime = 0;
+
+    }
+};
+
 struct MainMemory {
     Frame frames[8];
-    String name[8];
+    string name[8];
 public:
 
     int findEmptyFrame() {
@@ -55,85 +81,157 @@ public:
                 for (int k = 0; k < 2; k++)
                     if (frames[i].pages[j].lines[k] == "" && k == 0) {
                         index = i;
-                        break;
+                        return i;
                     }
 
+        }
+        return index;
+    }
+public:
+
+    int FindFrameNumber(string jobName) {
+        int index = -1;
+        for (int i = 0; i < 8; i++) {
+            if (jobName == name[i]) {
+                index = i;
+                break;
+            }
         }
         return index;
     }
 
 public:
 
-    void setMemory(string jobName, string content[], int position, int numberOfLines) {
+    int FindLeastUsedJob(MemoryJobs *jobs, int numberOfJobs) {
+        int index = -1;
+        int leastTime = jobs[0].lastUsedTime;
+        for (int i = 0; i < numberOfJobs; i++) {
+            if (jobs[i].lastUsedTime < leastTime) {
+                index = i;
+                leastTime = jobs[i].lastUsedTime;
+            }
+        }
+        return index;
+    }
+
+public:
+
+    void setMemory(string jobName, string content[], int position, int numberOfLines, MemoryJobs jobs[], int numberOfJobs, string storedContent[]) {
         int lineCnt = 0;
         int pageCnt = 0;
         int p = position;
+        bool memoryFull = false;
         int frameNumber = -1;
-        frameNumber=findEmptyFrame();
-        
-        for (int j = 0; j < numberOfLines; j++) {
-            frames[frameNumber].pages[pageCnt].lines[lineCnt] = content[p];
-            lineCnt++;
-            if (lineCnt == 2) {
-                lineCnt = 0;
-                pageCnt++;
-                if (pageCnt == 1) {
-                    pageCnt = 0;
-                    frameNumber++;
-                    if (frameNumber > 8) {
-                        cout << "could not fit all of them in memory!";
-                        break;
-                    }
 
+        int sCCnt = 0;
+        frameNumber = FindFrameNumber(jobName);
+        if (frameNumber == -1) {
+            frameNumber = findEmptyFrame();
+        }
+        if (frameNumber == -1) {
+            // MEMORY FULL
+            frameNumber = FindLeastUsedJob(jobs, numberOfJobs);
+        }
+        if (numberOfLines == 0)
+            storedContent[0] = content[p];
+        else {
+            for (int j = 0; j < numberOfLines; j++) {
+                frames[frameNumber].pages[pageCnt].lines[lineCnt] = content[p];
+                storedContent[sCCnt++] = content[p];
+                lineCnt++;
+                if (lineCnt == 2) {
+                    lineCnt = 0;
+                    pageCnt++;
+                    if (pageCnt == 1) {
+                        pageCnt = 0;
+                        if (!memoryFull)
+                            frameNumber++;
+                        else
+                            frameNumber = FindLeastUsedJob(jobs, numberOfJobs);
+                        if (frameNumber > 7) {
+                            cout << "could not fit all of them in memory! implementing lru";
+                            memoryFull = true;
+
+
+                        }
+
+                    }
                 }
+                p++;
             }
-            p--;
         }
 
     }
 
-    LinePosition findLine(string line) {
+    LinePosition searchMemory(string line) {
         LinePosition linePosition;
         linePosition.initialize();
         for (int i = 0; i < 8; i++) {
-            for (int j = 0; j < 2; j++) {
+            for (int j = 0; j < 1; j++) {
                 for (int k = 0; k < 2; k++) {
                     if (line == frames[i].pages[j].lines[k]) {
                         linePosition.frameNumber = i;
                         linePosition.pageNumber = j;
                         linePosition.lineNumber = k;
+                        return linePosition;
                     }
                 }
             }
         }
         return linePosition;
     }
+
+    void getFrames(LinePosition linePos, string storedContent[], string jobName) {
+        int currFrame = linePos.frameNumber;
+        int storedContCnt = 0;
+        if (currFrame != 0) {
+            if (jobName == name[currFrame - 1]) {
+                currFrame--;
+            }
+        }
+        for (int i = currFrame; i < currFrame + 2; i++) {
+            for (int j = 0; j < 2; j++) {
+                storedContent[i] = frames[i].pages[linePos.pageNumber].lines[j];
+                storedContCnt++;
+            }
+        }
+    }
 };
 
 struct CacheMemory {
     Page pages[2];
 
-    void setMemory(string content[], int position, int numberOfLines) {
+    void setMemory(string storedContent[]) {
         int lineCnt = 0;
         int pageCnt = 0;
-        int p = position;
 
-        for (int j = 0; j < numberOfLines; j++) {
-            pages[pageCnt].lines[lineCnt] = content[p];
+        for (int j = 0; j < 4; j++) {
+            pages[pageCnt].lines[lineCnt] = storedContent[j];
             lineCnt++;
             if (lineCnt == 2) {
                 lineCnt = 0;
                 pageCnt++;
-                if (pageCnt > 2) {
-                    cout << "could not fit all of them in chache memory!";
-                    break;
-
-                }
             }
-            p--;
         }
+    }
+
+public:
+
+    LinePosition searchMemory(string line) {
+        LinePosition linePosition;
+        linePosition.initialize();
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 2; j++)
+                if (line == pages[i].lines[j]) {
+                    linePosition.lineNumber = j;
+                    linePosition.pageNumber = i;
+                    return linePosition;
+                }
+        }
+        return linePosition;
 
     }
+
 public:
 
     LinePosition indexOf(string line) {
@@ -158,29 +256,6 @@ struct Jobs {
     int numberOfLines;
     int memoryNeed;
     string output;
-};
-
-struct MemoryJobs {
-    string name;
-    int startTime;
-    int numberOfLines;
-    string content[MAXLINENUMBER];
-    string output;
-    string variableName[MAXNUMBEROFVARIABLES];
-    int variableValue[MAXNUMBEROFVARIABLES];
-    int currentLine;
-    int numberOfVariables;
-public:
-
-    void initializer() {
-        startTime = 0;
-        name = "";
-        output = "";
-        currentLine = 0;
-        numberOfVariables = 0;
-        numberOfLines = 0;
-
-    }
 };
 
 class General {
@@ -291,6 +366,7 @@ public:
     Analysis() {
 
     }
+
 public:
 
     int StringToDigit(string number) {
@@ -421,6 +497,17 @@ public:
         else
             return (numberOfLines / 2) + 1;
     }
+
+private:
+    void updateAllJobs(MemoryJobs allJobs[], MemoryJobs job, int numberOfJobs) {
+        for(int i=0; i < numberOfJobs; i++) {
+            if(allJobs[i].name==job.name) {
+                allJobs[i].lastUsedTime=job.lastUsedTime;
+                break;
+            }
+        }
+    }
+
 public:
 
     void FCFS(Jobs *alljobs, string *output, int numberOfJobs) {
@@ -450,12 +537,14 @@ public:
 
     void RR(MemoryJobs *alljobs, string *output, int numberOfJobs, int quantom) {
         queue<MemoryJobs> q;
-        int totalTime = 0;
+        int currentTime = 0;
         string name;
         int index;
         int value;
         int cnt = 0;
         int qcounter = 0;
+        string storedContent[16];
+        LinePosition linePosition;
 
         MemoryJobs job;
         job.initializer();
@@ -466,16 +555,48 @@ public:
         for (int i = numberOfJobs - 1; i >= 0; i--) {
             q.push(alljobs[i]);
         }
-        totalTime = alljobs[numberOfJobs - 1].startTime;
+        currentTime = alljobs[numberOfJobs - 1].startTime;
         while (!q.empty()) {
             out.clear();
             out.str("");
             if (qcounter == 0) {
                 job = q.front();
             }
-            if (job.startTime <= totalTime) {
-                if (job.content[job.currentLine][0] == 'i' &&
-                        job.content[job.currentLine][1] == 'f') {
+            if (job.startTime <= currentTime) {
+                // First time job being processed
+                if (job.lastUsedTime == 0) {
+                    memory.setMemory(job.name, job.content, 0, 4, alljobs, numberOfJobs, storedContent);
+                    cache.setMemory(storedContent);
+                } else {
+                    // check the cache
+
+                    linePosition = cache.searchMemory(job.content[job.currentLine]);
+                    if (linePosition.pageNumber == -1) {
+                        //check the main memory and get the 2 frames for the cache
+                        linePosition = memory.searchMemory(job.content[job.currentLine]);
+                        if (linePosition.pageNumber != -1) {
+                            //get the frames lines into storedcontent
+                            memory.getFrames(linePosition, storedContent, job.name);
+                            //put in cache
+                            cache.setMemory(storedContent);
+                        } else {
+                            //pagefault, get next pages from disk
+                            if (job.currentLine < job.numberOfLines - 2)
+                                memory.setMemory(job.name, job.content, job.currentLine, 2, alljobs, numberOfJobs, storedContent);
+                            else
+                                memory.setMemory(job.name, job.content, job.currentLine, job.numberOfLines - job.currentLine, alljobs, numberOfJobs, storedContent);
+                            cache.setMemory(storedContent);
+
+                        }
+                        // cache.setMemory()
+                    }
+
+
+                }
+                job.lastUsedTime = currentTime;
+                updateAllJobs(alljobs, job, numberOfJobs);
+                if (cache.pages[linePosition.pageNumber].lines[linePosition.lineNumber][0] == 'i' &&
+                        cache.pages[linePosition.pageNumber].lines[linePosition.lineNumber][1] == 'f') {
                     name = findVariableName(job.content[job.currentLine]);
                     value = findVariableValue(job.content[job.currentLine]);
                     index = variableIndex(job.variableName, name);
@@ -493,7 +614,7 @@ public:
                         job.variableValue[index] = -1;
                     }
                 }
-                totalTime++;
+                currentTime++;
 
                 if (qcounter == 0)
                     q.pop();
@@ -512,7 +633,7 @@ public:
                     qcounter = -1;
                     out.clear();
                     out.str("");
-                    out << totalTime;
+                    out << currentTime;
                     job.output = job.output + " " + out.str();
                     if (job.currentLine < job.numberOfLines)
                         q.push(job);
