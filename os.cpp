@@ -582,7 +582,7 @@ public:
         	displayQueue(q);
             out.clear();
             out.str("");
-            if (qcounter == 0) {
+            if (qcounter == 0 && !q.empty()) {
                 job = q.front();
                 q.pop();
             }
@@ -720,16 +720,12 @@ public:
                 q.push(job);
             }
             currentTime++;
-            if(job.currentLine>job.numberOfLines+1 && q.empty())
+
+            if(job.currentLine>job.numberOfLines && q.empty())
             	noMoreJob=true;
         }
-        out.clear();
-        out.str("");
-        out << job.startTime;
-        cout << "\n--------------------------------------\n";
-      //  output[cnt] = job.name + " " + out.str() + " " + job.output;
-      //  cout << "\n--------------------------------------\n";
-        //cout << output[cnt];
+
+        cout << "\n---------------------"<<job.name << "---------------------------------------------END\n";
 
     }
     //without memory and cache
