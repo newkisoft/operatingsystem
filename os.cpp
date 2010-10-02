@@ -543,17 +543,12 @@ public:
     }
 public:
 
-    void displayQueue(queue<MemoryJobs> q, int jobNum) {
+    void displayQueue(queue<MemoryJobs> q) {
         queue<MemoryJobs> myq = q;
-        string str = "";
-        cout << "\n\n";
-        for (int i = 1; i < jobNum; i++) {
-            str += "\t";
-        }
-        cout << str + "Queue: ";
+        cout<<"\n===============================\nQueue:\n";
         while (!myq.empty()) {
             MemoryJobs job = myq.front();
-            cout << "job name: " + job.name + "\n\t" + str;
+            cout << "job name: " + job.name + "\n" ;
             myq.pop();
         }
         cout << "\n";
@@ -564,6 +559,7 @@ public:
     void RR(MemoryJobs *alljobs, string *output, int numberOfJobs, int quantom, int dumpTime, string outfile) {
         queue<MemoryJobs> q;
         int currentTime = 0;
+        bool noMoreJob=false;
         string name;
         int index;
         int value;
@@ -582,11 +578,13 @@ public:
             q.push(alljobs[i]);
         }
         currentTime = alljobs[numberOfJobs - 1].startTime;
-        while (!q.empty()) {
+        while (!noMoreJob) {
+        	displayQueue(q);
             out.clear();
             out.str("");
             if (qcounter == 0) {
                 job = q.front();
+                q.pop();
             }
             if (job.startTime <= currentTime) {
                 int jobNum = 1;
@@ -620,16 +618,14 @@ public:
                             cache.setMemory(storedContent);
                             linePosition = memory.searchMemory(job.content[job.currentLine]);
                             job.currentLine--;
-                            q.push(job);
-                            job = q.front();
+                            //q.push(job);
+                            //job = q.front();
                             //qcounter = 0;
-                            q.pop();
+                            //q.pop();
 
                         }
                         // cache.setMemory()
                     }
-
-
                 }
                 job.lastUsedTime = currentTime;
                 updateAllJobs(alljobs, job, numberOfJobs);
@@ -687,41 +683,45 @@ public:
                 cout << "\t\t\"" + currStr + "\"";*/
 
                 cout << job.name + "\tcurrentLine:" + lineNumber + "\t\tcurrentTime: " + time;
-                if (qcounter == 0){
+                //if (qcounter == 0){
 
-                    q.pop();
-                }
+                  //  q.pop();
+                //}
                 // if end of file
-                if (job.currentLine >= job.numberOfLines) {
+                if (job.currentLine > job.numberOfLines) {
                     out.clear();
                     out.str("");
                     out << job.startTime;
+                    qcounter=-1;
                  //   output[cnt] = job.name + " " + out.str() + " " + job.output;
                     //memory.
                     cout << "\n---------------------"<<job.name << "---------------------------------------------END\n";
+
                    // cout << output[cnt];
-                    cnt++;
+                 //  cnt++;
                 } else {
                     job.currentLine++;
                 }
                 // if this is the end of the quantum for this job
-                if ((qcounter >= (quantom - 1))) {
+                if ((qcounter >= (quantom - 1)) && job.currentLine<= job.numberOfLines) {
                     qcounter = -1;
                     out.clear();
                     out.str("");
                     out << currentTime;
                     job.output = job.output + " " + out.str();
-                    if (job.currentLine < job.numberOfLines)
+                    if (job.currentLine <= job.numberOfLines)
                         q.push(job);
                     cout << "\n--------------------------------------\n";
                 }
                 qcounter++;
                 //displayQueue(q, jobNum);
             } else {
-                q.pop();
+            	qcounter=0;
                 q.push(job);
             }
             currentTime++;
+            if(job.currentLine>job.numberOfLines+1 && q.empty())
+            	noMoreJob=true;
         }
         out.clear();
         out.str("");
