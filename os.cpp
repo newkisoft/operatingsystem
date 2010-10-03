@@ -208,33 +208,41 @@ public:
 
 struct CacheMemory {
     Page pages[2];
-
-    void setMemory(string storedContent[]) {
+    string name[4];
+    void setMemory(string storedContent[],string jobName) {
         int lineCnt = 0;
         int pageCnt = 0;
+        int nameCounter=0;
 
         for (int j = 0; j < 4; j++) {
             pages[pageCnt].lines[lineCnt] = storedContent[j];
+            name[nameCounter]=jobName;
             lineCnt++;
             if (lineCnt == 2) {
                 lineCnt = 0;
                 pageCnt++;
             }
+            nameCounter++;
         }
     }
 
 public:
 
-    LinePosition searchMemory(string line) {
+    LinePosition searchMemory(string line,string jobName) {
         LinePosition linePosition;
         linePosition.initialize();
+        int nameCounter=0;
         for (int i = 0; i < 2; i++) {
-            for (int j = 0; j < 2; j++)
-                if (line == pages[i].lines[j]) {
+            for (int j = 0; j < 2; j++){
+
+                if (line == pages[i].lines[j] && name[nameCounter]==jobName) {
                     linePosition.lineNumber = j;
                     linePosition.pageNumber = i;
+
                     return linePosition;
                 }
+                nameCounter++;
+            }
         }
         return linePosition;
 
@@ -350,6 +358,7 @@ public:
             }
 
             inFile.close();
+            lineNumber--;
             cout << "File has been read, will be analysed!\n";
         }
         return lineNumber;
@@ -427,7 +436,7 @@ public:
         string result = "";
         for (cnt = 2; cnt < fullString.length(); cnt++) {
             if (fullString[cnt] == 'g' && fullString[cnt + 1] == 'o' && fullString[cnt + 2] == 't'
-                    && fullString[cnt + 3] == 'o') {
+				&& fullString[cnt + 3] == 'o') {
                 cnt += 4;
                 break;
             }
@@ -543,23 +552,36 @@ public:
     }
 public:
 
-    void displayQueue(queue<MemoryJobs> q) {
+    void displayQueue(queue<MemoryJobs> q, int jobNum) {
         queue<MemoryJobs> myq = q;
-        cout<<"\n===============================\nQueue:\n";
-        while (!myq.empty()) {
+		cout<< "\n\n";
+		if (jobNum == 2) cout << "\t\t\t";
+		if (jobNum == 3) cout << "\t\t\t\t\t\t";
+        cout<< "Queue: ";
+		MemoryJobs job = myq.front();
+		cout<< "\tjob name: "+job.name + "\n\t\t\t";
+		myq.pop();
+        while(!myq.empty())
+        {
             MemoryJobs job = myq.front();
-            cout << "job name: " + job.name + "\n" ;
+			if (jobNum == 2) cout << "\t\t\t";
+			if (jobNum == 3) cout << "\t\t\t\t\t\t";
+            cout<< "job name: "+job.name + "\n\t\t\t";
             myq.pop();
         }
-        cout << "\n";
+		cout<< "\n";
+
     }
+
     // if memory has been used this function should be called;
 public:
 
     void RR(MemoryJobs *alljobs, string *output, int numberOfJobs, int quantom, int dumpTime, string outfile) {
+		int jobNum = 1;
         queue<MemoryJobs> q;
         int currentTime = 0;
         bool noMoreJob=false;
+        bool pageFault =false;
         string name;
         int index;
         int value;
@@ -567,6 +589,7 @@ public:
         int qcounter = 0;
         string storedContent[16];
         LinePosition linePosition;
+		bool eof = false;
 
         MemoryJobs job;
         job.initializer();
@@ -579,33 +602,40 @@ public:
         }
         currentTime = alljobs[numberOfJobs - 1].startTime;
         while (!noMoreJob) {
-        	displayQueue(q);
+        	displayQueue(q, jobNum);
             out.clear();
             out.str("");
             if (qcounter == 0 && !q.empty()) {
                 job = q.front();
                 q.pop();
             }
+			if (eof==true) {
+				cout << "\n---------------------"<<job.name << "---------------------------------------------END\n";
+				job = q.front();
+                q.pop();
+			}
             if (job.startTime <= currentTime) {
-                int jobNum = 1;
+
                 // First time job being processed
                 if (job.lastUsedTime == 0) {
                     memory.setMemory(job.name, job.content, 0, 4, alljobs, numberOfJobs, storedContent);
-                    cache.setMemory(storedContent);
-                    linePosition = cache.searchMemory(job.content[job.currentLine]);
+                    cache.setMemory(storedContent,job.name);
+                    linePosition = cache.searchMemory(job.content[job.currentLine],job.name);
                 } else {
                     // check the cache
-                    linePosition = cache.searchMemory(job.content[job.currentLine]);
+                    linePosition = cache.searchMemory(job.content[job.currentLine],job.name);
 
                     //MAIN MEMORY
                     if (linePosition.pageNumber == -1) {
                         //check the main memory and get the 2 frames for the cache
                         linePosition = memory.searchMemory(job.content[job.currentLine]);
+                        pageFault=false;
                         if (linePosition.pageNumber != -1) {
                             //get the frames lines into storedcontent
                             memory.getFrames(linePosition, storedContent, job.name);
                             //put in cache
-                            cache.setMemory(storedContent);
+                            cache.setMemory(storedContent,job.name);
+                            pageFault=false;
                         } else {
                             //pagefault, get next pages from disk
                             cout << "\n\n\tPagefault happened here, reading from disk\n";
@@ -615,9 +645,10 @@ public:
                             else
                                 // if current line is end of file/1 line before end of file, take last 2 lines of the file
                                 memory.setMemory(job.name, job.content, job.currentLine, job.numberOfLines - job.currentLine, alljobs, numberOfJobs, storedContent);
-                            cache.setMemory(storedContent);
+                            cache.setMemory(storedContent,job.name);
                             linePosition = memory.searchMemory(job.content[job.currentLine]);
                             job.currentLine--;
+                            pageFault=true;
                             //q.push(job);
                             //job = q.front();
                             //qcounter = 0;
@@ -629,10 +660,15 @@ public:
                 }
                 job.lastUsedTime = currentTime;
                 updateAllJobs(alljobs, job, numberOfJobs);
-                // put the current line's string into currStr
-                string currStr = cache.pages[linePosition.pageNumber].lines[linePosition.lineNumber];
-                if (qcounter < quantom - 1) {
+                if(!pageFault){
+
+					// put the current line's string into currStr
+					string currStr = job.content[job.currentLine];
+					//if (qcounter < quantom - 1) {
                     if (strncmp(currStr.c_str(), "if", 2) == 0) {
+                    	if(job.name=="job2.txt"){
+                    		cnt=0;
+                    	}
                         name = findVariableName(job.content[job.currentLine]);
                         value = findVariableValue(job.content[job.currentLine]);
                         index = variableIndex(job.variableName, name);
@@ -643,6 +679,7 @@ public:
                             job.numberOfVariables++;
                         } else {
                             job.variableValue[index]++;
+
                         }
                         if (job.variableValue[index] < value)
                             job.currentLine = findLine(job.content[job.currentLine]);
@@ -651,6 +688,7 @@ public:
                         }
                     }
                 }
+				// }
 
                 out.clear();
                 out.str("");
@@ -660,45 +698,39 @@ public:
                 out.str("");
                 out << job.currentLine;
                 string lineNumber = out.str();
+				string currStr = job.content[job.currentLine];
 
                 cout << "\n";
-             /*   if (strcmp(job.name.c_str(), "job2.txt") == 0) cout << "";
-                if (strcmp(job.name.c_str(), "job3.txt") == 0) cout << "\t";
-                cout << "--------------------------------------\n";
-                if (strcmp(job.name.c_str(), "job2.txt") == 0) {
-                    cout << "\t\t\t";
-                    jobNum = 2;
-                }
-                if (strcmp(job.name.c_str(), "job3.txt") == 0) {
-                    cout << "\t\t\t\t\t\t";
-                    jobNum = 3;
-                }
-                cout << job.name + "\tcurrentLine:" + lineNumber + "\t\tcurrentTime: " + time;
-                if (strcmp(job.name.c_str(), "job2.txt") == 0) {
-                    cout << "\t\t\t";
-                }
-                if (strcmp(job.name.c_str(), "job1.txt") == 0) {
-                    cout << "\t\t\t\t\t\t";
-                }
-                cout << "\t\t\"" + currStr + "\"";*/
-
-                cout << job.name + "\tcurrentLine:" + lineNumber + "\t\tcurrentTime: " + time;
+				if (strcmp(job.name.c_str(), "job2.txt") == 0) cout << "\t\t\t";
+				if (strcmp(job.name.c_str(), "job3.txt") == 0) cout << "\t\t\t\t\t\t";
+				cout << "--------------------------------------\n";
+				if (strcmp(job.name.c_str(), "job2.txt") == 0) {
+					cout << "\t\t\t";
+					jobNum = 2;
+				}
+				if (strcmp(job.name.c_str(), "job3.txt") == 0) {
+					cout << "\t\t\t\t\t\t";
+					jobNum = 3;
+				}
+				cout << job.name + "\tcurrentLine:" + lineNumber + "\t\tcurrentTime: " + time;
+				if (strcmp(job.name.c_str(), "job2.txt") == 0) {
+					cout << "\t\t\t";
+				}
+				if (strcmp(job.name.c_str(), "job1.txt") == 0) {
+					cout << "\t\t\t\t\t\t";
+				}
+				cout << "\t\t\"" + currStr + "\"";
+				//if(job.name=="job3.txt")
+				//cout << job.name + "\tcurrentLine:" + lineNumber + "\t\tcurrentTime: " + time<<job.content[job.currentLine];
                 //if (qcounter == 0){
 
-                  //  q.pop();
+				//  q.pop();
                 //}
                 // if end of file
                 if (job.currentLine > job.numberOfLines) {
-                    out.clear();
-                    out.str("");
-                    out << job.startTime;
-                    qcounter=-1;
-                 //   output[cnt] = job.name + " " + out.str() + " " + job.output;
-                    //memory.
-                    cout << "\n---------------------"<<job.name << "---------------------------------------------END\n";
 
-                   // cout << output[cnt];
-                 //  cnt++;
+                    qcounter=-1;
+
                 } else {
                     job.currentLine++;
                 }
@@ -711,7 +743,10 @@ public:
                     job.output = job.output + " " + out.str();
                     if (job.currentLine <= job.numberOfLines)
                         q.push(job);
-                    cout << "\n--------------------------------------\n";
+                    cout << "\n";
+					if (strcmp(job.name.c_str(), "job2.txt") == 0) cout << "\t\t\t";
+					if (strcmp(job.name.c_str(), "job3.txt") == 0) cout << "\t\t\t\t\t\t";
+                    cout << "--------------------------------------\n";
                 }
                 qcounter++;
                 //displayQueue(q, jobNum);
@@ -721,8 +756,10 @@ public:
             }
             currentTime++;
 
-            if(job.currentLine>job.numberOfLines && q.empty())
-            	noMoreJob=true;
+            if(job.currentLine>job.numberOfLines)
+				eof = true;
+				if(q.empty())
+					noMoreJob=true;
         }
 
         cout << "\n---------------------"<<job.name << "---------------------------------------------END\n";
