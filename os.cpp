@@ -578,7 +578,7 @@ public:
 		FileTransfer file;
 		file.ReadFile(fileName, content);
 		while (content[cnt] != "") {
-			if (content[cnt][0] == 'i' && content[cnt][1] == 'f') {
+			if (strncmp(content[cnt].c_str(), "if", 2) == 0) {
 				name = findVariableName(content[cnt]);
 				value = findVariableValue(content[cnt]);
 				index = variableIndex(variableName, name);
@@ -630,22 +630,32 @@ public:
 		queue<Jobs> q;
 		General general;
 		int cnt;
+		int time=0;
+		string temp;
 		general.Sort(alljobs, numberOfJobs);
 		for (int i = 0; i < numberOfJobs; i++) {
 			q.push(alljobs[i]);
 		}
 		stringstream out;
 		cnt = 0;
+		Jobs job;
+		job = q.front();
+		time =job.startTime;
 		while (!q.empty()) {
 			out.clear();
 			out.str("");
 			Jobs job;
 			job = q.front();
 			out << job.duration;
-			output[cnt] = job.name + "," + out.str();
-			cout << output << "\n";
+			temp=out.str();
+			out.clear();
+			out.str("");
+			out << time;
+			output[cnt] = job.name + "," + out.str()+","+temp;
+			cout << output[cnt] << "\n";
 			q.pop();
 			cnt++;
+			time +=job.duration;
 		}
 	}
 public:
@@ -1241,9 +1251,9 @@ int main(int argc, char** argv) {
 
 	} else {
 		// NON-SIMULATED MEMORY
-		if (argv[1] == "FCFS") {
+		if (strcmp(argv[1],"FCFS")==0) {
 			filetransfer.ReadFile(argv[2], files);
-		} else if (argv[1] == "RR") {
+		} else if (strcmp(argv[1],"RR")==0) {
 			quantum = analysis.StringToDigit(argv[2]);
 			filetransfer.ReadFile(argv[3], files);
 		}
@@ -1254,17 +1264,22 @@ int main(int argc, char** argv) {
 			job.name = files[cnt];
 			job.startTime = analysis.StringToDigit(result[0]);
 			job.duration = analysis.CalculateTime(files[cnt]);
-			job.memoryNeed = analysis.calculateMemoryNeed(job.numberOfLines);
 			alljobs[cnt] = job;
 			cnt++;
 			numberOfJobs++;
 		}
 		if (strcmp(argv[1], "FCFS") == 0)
+		{
+			outfile=argv[3];
 			analysis.FCFS(alljobs, output, numberOfJobs, dumpTime, outfile);
+		}
 		else if (strcmp(argv[1], "RR") == 0)
+		{
+			outfile=argv[4];
 			analysis.RR(alljobs, output, numberOfJobs, quantum, dumpTime,
 					outfile);
-		filetransfer.WriteFile("write", output, cnt);
+		}
+		filetransfer.WriteFile(outfile, output, cnt);
 	}
 	return 0;
 }
