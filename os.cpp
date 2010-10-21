@@ -1,17 +1,14 @@
 //============================================================================
 // Name        : os.cpp
-// Author      : Kianoush Akhavan Karbasi, Ashley Ramsey
-// Version     :
+// Author      : Kianoush Akhavan Karbasi(20339561), Ashley Ramsey(20543173)
+// Version     : 1
 // Copyright   : You can copy this as many as you want
-// Description : Hello World in C++, Ansi-style
+// Description : Operating System in C++, UWA 2010
 //============================================================================
-
-/*
- * File:   main.cpp
- * Author: kianoosh
- *
- * Created on 1 September 2010, 10:55 AM
- */
+// it is possible to display cache memory as well just replace memory by cache lik
+// cache.displayMemory(output,outputCounter);
+// in line 1000 it is displaying cache if you want memory just replace cache by memory
+// memory.displayMemory(output,outputCounter);
 
 #include <cstdlib>
 #include <iostream>
@@ -22,14 +19,12 @@
 #include <sstream>
 
 using namespace std;
-
-/*
- *
- */
+// maximum line number and variables and jobs in the text files
 static const int MAXLINENUMBER = 200;
 static const int MAXNUMBEROFVARIABLES = 100;
 static const int MAXJOBSNUMBER = 400;
 
+// Position of line in a frame or page
 struct LinePosition {
 	int frameNumber;
 	int pageNumber;
@@ -42,17 +37,31 @@ struct LinePosition {
 	}
 };
 
+//page of the memory
 struct Page {
 	string lines[2];
 	int jobLineNumber[2];
 };
-
+//frame of the main memory
 struct Frame {
 	Page pages[2];
 	int usedTime;
 	string jobName;
 };
-
+// jobs specific for memory part of the project which has some extra
+// attribues.
+// name is the name of the job
+// startTime is the time which job should be started it is at the first
+// line of the file
+// numberOfLines is the number of lines in the text file or same as
+// number of processes in the job
+// content is all the content of the file
+// output is what is going to be print out
+// variablName names of variables in the file for loops
+// currentLine the line which the cpu is running at the moment
+// numberOfVariables number of variables in the file
+// lastUsedTime last time this job has been called
+// pagefault it will be true if page fault happening in the main memory
 struct MemoryJobs {
 	string name;
 	int startTime;
@@ -78,7 +87,7 @@ public:
 
 	}
 };
-
+// main memory of the system which contains 8 frames
 struct MainMemory {
 	Frame frames[8];
  MainMemory(){
@@ -88,6 +97,7 @@ struct MainMemory {
 					frames[i].pages[0].lines[j]="";
 	}
 }
+ // initializing all the frames by empty string
 public:
 	void initialize() {
 		for (int i = 0; i < 8; i++) {
@@ -96,6 +106,8 @@ public:
 				frames[i].pages[0].lines[j]="";
 		}
 	}
+// finding empty frame in the memory to be used and return
+// index of that frame
 public:
 
 	int findEmptyFrame() {
@@ -111,6 +123,8 @@ public:
 		}
 		return index;
 	}
+// find the frame number of main memory which an specfic job
+// has been passed by name
 public:
 
 	int FindFrameNumber(string jobName) {
@@ -123,7 +137,8 @@ public:
 		}
 		return index;
 	}
-
+// finding the frame which has not been used for a while and
+// return the index of that to be used
 public:
 
 	int findLeastUsedFrame() {
@@ -137,6 +152,8 @@ public:
 		}
 		return index;
 	}
+//display the content of the main memory
+
 public:
 	void displayMemory(string output[],int &counter){
 		stringstream out;
@@ -168,6 +185,14 @@ public:
 		counter++;
 
 	}
+// for setting the memory by job name and passing the start line and content
+// jobName name of the job
+// startLineNumber from this line in the content should be set in the memory
+// content the whole content of the file
+// position start position of the ilne in the memory
+// numberOfLines number of lines which should be written in the memory
+// storedContent the content which has been written in the memory
+// time current time
 public:
 
 	void setMemory(string jobName,int startLineNumber, string content[], int position,
@@ -180,13 +205,16 @@ public:
 
 		int sCCnt = 0;
 		frameNumber = FindFrameNumber(jobName);
+		// if job is not in the memory find the empty frame
 		if (frameNumber == -1) {
 			frameNumber = findEmptyFrame();
 		}
+		//if there is not any empty memory find the least used one and replace it
 		if (frameNumber == -1) {
 			// MEMORY FULL
 			frameNumber = findLeastUsedFrame();
 		}
+		//it means there is only one line
 		if (numberOfLines == 0){
 			frames[frameNumber].pages[pageCnt].lines[lineCnt] = content[p];
 			frames[frameNumber].pages[pageCnt].jobLineNumber[lineCnt] = startLineNumber;
@@ -224,7 +252,8 @@ public:
 		}
 
 	}
-
+// search the memory for a specific line and return the position of that line
+// line the content of the one line in which is in text file
 	LinePosition searchMemory(string line) {
 		LinePosition linePosition;
 		linePosition.initialize();
@@ -242,6 +271,10 @@ public:
 		}
 		return linePosition;
 	}
+// find the next frame by the jobname and line number
+// jobName name of the job in the frame
+// lineNumber the number of line which should find the next frame of that
+// returning the a frame type which is the next frame that contain this job
  Frame findNextFrame(string jobName,int lineNumber){
 	Frame nextFrame;
 	for(int j=0;j<2;j++)
@@ -255,6 +288,10 @@ public:
 	}
 	return nextFrame;
 }
+ // Get frames releted to a specific job
+ // linePos the start line position in the frame that should be fetched
+ // storedContent the content of the memory will be saved in this array
+ // jobName the name of the job which should get the frames related to that
 	void getFrames(LinePosition linePos, string storedContent[], string jobName) {
 
 		int storedContCnt = 0;
@@ -276,10 +313,13 @@ public:
 		}
 	}
 };
-
+// cachememory which contains pages and jobs names
 struct CacheMemory {
 	Page pages[2];
 	string name[4];
+	//setting the memory by jobname
+	// storedContent content which has been saved
+	// jobName the name of the job which is going to be save in the memory
 	void setMemory(string storedContent[], string jobName) {
 		int lineCnt = 0;
 		int pageCnt = 0;
@@ -296,6 +336,9 @@ struct CacheMemory {
 			nameCounter++;
 		}
 	}
+	// display the content of the memory
+	//output what is going to be printed
+	// the line of the job in the memory
 public:
 	void displayMemory(string output[],int &counter){
 		int jobNameCounter=0;
@@ -318,6 +361,10 @@ public:
 		output[counter]="=================================End Of Cahce Memory================================================";
 		counter++;
 	}
+	// searching in a memory to find a position of a specfic job
+	// jobName name of the job
+	// line the line which is giong to be searched in the memory
+	// return the position of the line
 public:
 
 	LinePosition searchMemory(string line, string jobName) {
@@ -339,7 +386,8 @@ public:
 		return linePosition;
 
 	}
-
+	// search in the cache memroy for a specific line and return the position of that
+	// the line which should be looking for that in the cache memory
 public:
 
 	LinePosition indexOf(string line) {
@@ -356,19 +404,27 @@ public:
 		return linePosition;
 	}
 };
-
+// Jobs specific for the first part of the project which is not using the memory
+// name the name of the job
+// startTime the time which the job is coming to the computer which can be read at
+// the first line of the text file
+// duration how long does it take to finish the job
+// numberOfLines number of lines in the text file which are the processes for our
+// simulator
+// output what ever has to be print out
 struct Jobs {
 	string name;
 	int startTime;
 	int duration;
 	int numberOfLines;
-	int memoryNeed;
 	string output;
 };
-
+// general methods which can be used anywhere
 class General {
 public:
-
+	// sort for sorting all the jobs which are specific for memory part of the project
+	// alljobs all the jobs that will be processed
+	// length number of jobs
 	void Sort(MemoryJobs alljobs[], int length) {
 		int flag = 1;
 		for (int i = 0; i < length && flag; i++) {
@@ -385,6 +441,9 @@ public:
 			}
 		}
 	}
+	// sort all the jobs specific for the first part of the project without memory
+	// alljobs all the jobs that will be processed
+	// length number of jobs
 public:
 
 	void Sort(Jobs alljobs[], int length) {
@@ -403,6 +462,10 @@ public:
 			}
 		}
 	}
+	// find the index of the specific line in an array of files content
+	// content an array of file content
+	// line a specifc line in a content
+	// return the index of that line in content
 public:
 
 	int findIndex(string content[], string line) {
@@ -416,6 +479,11 @@ public:
 		}
 		return index;
 	}
+	// get all the lines in the content from the start positions
+	// content the content which lines should be fetched from it
+	// start start index which lines should be fetched in the content
+	// numberOfLines how many lines should be fetched
+	// result lines which has been fetch will be put in this array
 public:
 
 	void getLines(string content[], int start, int numberOfLines,
@@ -427,8 +495,11 @@ public:
 		}
 	}
 };
-
+// For reading and writing to the file
 class FileTransfer {
+	//Read from a file
+	// filename the name of the file
+	// content all the content tha thas been read from a file
 public:
 
 	int ReadFile(string filename, string content[]) {
@@ -455,6 +526,10 @@ public:
 		}
 		return lineNumber;
 	}
+	// write to the file
+	// filename the name of the file which has to be written
+	// content an array of lines which has to be wrriten in the file
+	// length length of the content which is not empty line
 public:
 
 	void WriteFile(string filename, string *content, int length) {
@@ -469,14 +544,18 @@ public:
 	}
 
 };
+// Analysis the file for various things like duration and variables
 
 class Analysis: public General {
+
 public:
 
 	Analysis() {
 
 	}
-
+	// converting string to digit
+	// number is the number which is in string
+	// return the number which has been convertet
 public:
 
 	int StringToDigit(string number) {
@@ -484,6 +563,9 @@ public:
 		temp = atoi(number.c_str());
 		return temp;
 	}
+	// checking whether the char is character or not
+	// c the character which has to be checked
+	// return true if it is a character otherwise false
 public:
 
 	bool isCharacter(char c) {
@@ -492,6 +574,9 @@ public:
 		else
 			return false;
 	}
+	// find the variable name in a line
+	// fullString one line of the text file
+	// return the variable name
 public:
 
 	string findVariableName(string fullString) {
@@ -505,6 +590,8 @@ public:
 		}
 		return result;
 	}
+	// find for how long the loop should go the max value of the variable
+	// fullString one line of the text file
 public:
 
 	int findVariableValue(string fullString) {
@@ -524,6 +611,9 @@ public:
 		}
 		return StringToDigit(result);
 	}
+	// find the start time of the job
+	//fullString the first line of the text file
+	// return the start of the job
 public:
 
 	int findLine(string fullString) {
@@ -544,6 +634,9 @@ public:
 		}
 		return StringToDigit(result);
 	}
+	// find the index of the variable in the variable list
+	// variables array of variables
+	// variable the value of the variable
 public:
 
 	int variableIndex(string variables[], string variable) {
@@ -556,12 +649,17 @@ public:
 		}
 		return index;
 	}
+	// initilize all the variables by zero
+	// *variable all the variables
 public:
 
 	void initialize(int *variable) {
 		for (int i = 0; i < MAXNUMBEROFVARIABLES; i++)
 			variable[i] = 0;
 	}
+	// calculate the time is taking to finish for each job
+	// fileName the name of the file
+	// return the time is taking to finish that job
 public:
 
 	int CalculateTime(string fileName) {
@@ -602,16 +700,10 @@ public:
 		}
 		return time;
 	}
-public:
-
-	int calculateMemoryNeed(int numberOfLines) {
-		int temp = numberOfLines % 2;
-		if (temp == 0)
-			return numberOfLines / 2;
-		else
-			return (numberOfLines / 2) + 1;
-	}
-
+	// update the last time job has been used in the memory
+	//alljobs list of all jobs
+	// job that specific job which has been called recently
+	// numberOfJobs the total number of jobs
 private:
 
 	void updateAllJobs(MemoryJobs allJobs[], MemoryJobs job, int numberOfJobs) {
@@ -622,11 +714,13 @@ private:
 			}
 		}
 	}
+	// First come first server method for first part of the project which is not
+	// using the memory
+	// alljbos list of all jobs
 
 public:
 
-	void FCFS(Jobs *alljobs, string *output, int numberOfJobs, int dumpTime,
-			string outfile) {
+	void FCFS(Jobs *alljobs, string *output, int numberOfJobs) {
 		queue<Jobs> q;
 		General general;
 		int cnt;
@@ -658,25 +752,19 @@ public:
 			time +=job.duration;
 		}
 	}
+	// display the content of the queue
+	// q queue
+
 public:
 
-	void displayQueue(queue<MemoryJobs> q, int jobNum) {
+	void displayQueue(queue<MemoryJobs> q) {
 		queue<MemoryJobs> myq = q;
 		cout << "\n----------------------------------QUEUE--------------------------------------------\n";
-	//	if (jobNum == 2)
-		//	cout << "\t\t\t";
-//		if (jobNum == 3)
-	//		cout << "\t\t\t\t\t\t";
-	//	cout << "Queue: ";
 		MemoryJobs job = myq.front();
 		cout << "\njob name: " + job.name + "\n";
 		myq.pop();
 		while (!myq.empty()) {
 			MemoryJobs job = myq.front();
-		//	if (jobNum == 2)
-			//	cout << "\t\t\t";
-//			if (jobNum == 3)
-	//			cout << "\t\t\t\t\t\t";
 			cout << "job name: " + job.name + "\n";
 			myq.pop();
 		}
@@ -685,6 +773,9 @@ public:
 
 	}
 	// if memory has been used this function should be called;
+	// alljobs an array of all jobs
+	// numberOfJobs the number of jobs which should be processed
+	// dumpTime the time which the main memory or cache memory should be shown
 public:
 
 	void FCFS(MemoryJobs *alljobs,  int numberOfJobs,
@@ -719,7 +810,7 @@ public:
 			if(currentTime%dumpTime ==0)
 					memory.displayMemory(output,outputCounter);
 			if(!q.empty())
-				displayQueue(q, jobNum);
+				displayQueue(q);
 			out.clear();
 			out.str("");
 			if (eof == true && !q.empty()) {
@@ -779,13 +870,8 @@ public:
 									job.content[job.currentLine]);
 							job.currentLine--;
 							pageFault = true;
-							//q.push(job);
-							//job = q.front();
-							//qcounter = 0;
-							//q.pop();
 
 						}
-						// cache.setMemory()
 					}
 				}
 				job.lastUsedTime = currentTime;
@@ -831,37 +917,9 @@ public:
 				string lineNumber = out.str();
 				string currStr = job.content[job.currentLine];
 
-				//cout << "\n";
-				//if (strcmp(job.name.c_str(), "job2.txt") == 0)
-				//	cout << "\t\t\t";
-				//if (strcmp(job.name.c_str(), "job3.txt") == 0)
-				//	cout << "\t\t\t\t\t\t";
-				//cout << "--------------------------------------\n";
-				//if (strcmp(job.name.c_str(), "job2.txt") == 0) {
-				//	cout << "\t\t\t";
-				//	jobNum = 2;
-				//}
-				//if (strcmp(job.name.c_str(), "job3.txt") == 0) {
-				//	cout << "\t\t\t\t\t\t";
-				//	jobNum = 3;
-				//}
-				//cout << job.name + "\tcurrentLine:" + lineNumber
-				//		+ "\t\tcurrentTime: " + time;
-				//if (strcmp(job.name.c_str(), "job2.txt") == 0) {
-				//	cout << "\t\t\t";
-				//}
-				//if (strcmp(job.name.c_str(), "job1.txt") == 0) {
-				//	cout << "\t\t\t\t\t\t";
-				//}
-				//cout << "\t\t\"" + currStr + "\"";
-				//if(job.name=="job3.txt")
 				cout << job.name + "\tcurrentLine:" + lineNumber + "\t\tcurrentTime: " + time<<job.content[job.currentLine];
 				output[outputCounter]=job.name + "\tcurrentLine:" + lineNumber + "\t\tcurrentTime: " + time+job.content[job.currentLine];
 				outputCounter++;
-				//if (qcounter == 0){
-
-				//  q.pop();
-				//}
 				// if end of file
 				if (job.currentLine <= job.numberOfLines) {
 					job.currentLine++;
@@ -876,14 +934,8 @@ public:
 					cout << "\n";
 					output[outputCounter]="\n";
 					outputCounter++;
-					//if (strcmp(job.name.c_str(), "job2.txt") == 0)
-					//	cout << "\t\t\t";
-				//	if (strcmp(job.name.c_str(), "job3.txt") == 0)
-				//		cout << "\t\t\t\t\t\t";
-					//cout << "--------------------------------------\n";
 				}
 
-				//displayQueue(q, jobNum);
 			} else {
 
 				q.push(job);
@@ -905,6 +957,12 @@ public:
 
 	}
 	// if memory has been used this function should be called;
+	// Round Robin method for jobs with memory
+	// alljobs all the jobs in the file
+	// numberOfJobs the number of jobs which should be processed
+	// quantom the time which job should be replaced
+	// dumpTime the time which should the content of the memory displayed
+	// outfile the file which the result should be print in
 public:
 
 	void RR(MemoryJobs *alljobs,  int numberOfJobs, int quantom,
@@ -938,7 +996,7 @@ public:
 		currentTime = alljobs[numberOfJobs - 1].startTime;
 		memory.initialize();
 		while (!noMoreJob) {
-			displayQueue(q, jobNum);
+			displayQueue(q);
 			out.clear();
 			out.str("");
 			if(currentTime%dumpTime ==0)
@@ -1004,13 +1062,8 @@ public:
 									job.content[job.currentLine]);
 							job.currentLine--;
 							pageFault = true;
-							//q.push(job);
-							//job = q.front();
-							//qcounter = 0;
-							//q.pop();
 
 						}
-						// cache.setMemory()
 					}
 				}
 				job.lastUsedTime = currentTime;
@@ -1019,7 +1072,6 @@ public:
 
 					// put the current line's string into currStr
 					string currStr = job.content[job.currentLine];
-					//if (qcounter < quantom - 1) {
 					if (strncmp(currStr.c_str(), "if", 2) == 0) {
 						if (job.name == "job2.txt") {
 							cnt = 0;
@@ -1044,7 +1096,6 @@ public:
 						}
 					}
 				}
-				// }
 
 				out.clear();
 				out.str("");
@@ -1059,37 +1110,9 @@ public:
 				cout << "\n";
 				output[outputCounter]="\n";
 								outputCounter++;
-				//if (strcmp(job.name.c_str(), "job2.txt") == 0)
-				//	cout << "\t\t\t";
-				//if (strcmp(job.name.c_str(), "job3.txt") == 0)
-				//	cout << "\t\t\t\t\t\t";
-				//cout << "--------------------------------------\n";
-				//if (strcmp(job.name.c_str(), "job2.txt") == 0) {
-				//	cout << "\t\t\t";
-				//	jobNum = 2;
-				//}
-				//if (strcmp(job.name.c_str(), "job3.txt") == 0) {
-				//	cout << "\t\t\t\t\t\t";
-				//	jobNum = 3;
-				//}
-				//cout << job.name + "\tcurrentLine:" + lineNumber
-				//		+ "\t\tcurrentTime: " + time;
-				//if (strcmp(job.name.c_str(), "job2.txt") == 0) {
-				//	cout << "\t\t\t";
-				//}
-				//if (strcmp(job.name.c_str(), "job1.txt") == 0) {
-				//	cout << "\t\t\t\t\t\t";
-				//}
-				//cout << "\t\t\"" + currStr + "\"";
-				//if(job.name=="job3.txt")
 				cout << job.name + "\tcurrentLine:" + lineNumber + "\t\tcurrentTime: " + time<<job.content[job.currentLine];
 				output[outputCounter]=job.name + "\tcurrentLine:" + lineNumber + "\t\tcurrentTime: " + time+job.content[job.currentLine];
 				outputCounter++;
-				//if (qcounter == 0){
-
-				//  q.pop();
-				//}
-				// if end of file
 				if (job.currentLine > job.numberOfLines) {
 
 					qcounter = -1;
@@ -1110,14 +1133,8 @@ public:
 					cout << "\n";
 					output[outputCounter]="\n";
 									outputCounter++;
-					//if (strcmp(job.name.c_str(), "job2.txt") == 0)
-					//	cout << "\t\t\t";
-					//if (strcmp(job.name.c_str(), "job3.txt") == 0)
-					//	cout << "\t\t\t\t\t\t";
-					//cout << "--------------------------------------\n";
 				}
 				qcounter++;
-				//displayQueue(q, jobNum);
 			} else {
 				qcounter = 0;
 
@@ -1140,10 +1157,15 @@ public:
 
 	}
 	//without memory and cache
+	// alljobs all the jobs
+	// output whatever should be print out as a result
+	// numberOfJobs number of jobs which should be processed
+	// quantom the time which job should be replaced
+	// outfile the file which the result should be print out
 public:
 
 	void RR(Jobs *alljobs, string *output, int numberOfJobs, int quantom,
-			int dumpTime, string outfile) {
+			 string outfile) {
 		queue<Jobs> q;
 		int totalTime;
 		int cnt = 0;
@@ -1175,6 +1197,7 @@ public:
 				out.str("");
 				out << job.startTime;
 				output[cnt] = job.name + " " + out.str() + " " + job.output;
+				cout << output[cnt] << "\n";
 				cnt++;
 			}
 
@@ -1182,7 +1205,7 @@ public:
 	}
 
 };
-
+// displaying all the arguments that has been passed
 void display(char** argv) {
 	for (int i = 0; i < 4; i++) {
 		cout << argv[i] << "\n";
@@ -1195,7 +1218,6 @@ int main(int argc, char** argv) {
 	int cnt = 0;
 	bool memory = false;
 	int quantum = 0;
-	//display(argv);
 
 	Jobs alljobs[MAXJOBSNUMBER];
 	MemoryJobs memoryJobs[MAXJOBSNUMBER];
@@ -1251,6 +1273,7 @@ int main(int argc, char** argv) {
 
 	} else {
 		// NON-SIMULATED MEMORY
+
 		if (strcmp(argv[1],"FCFS")==0) {
 			filetransfer.ReadFile(argv[2], files);
 		} else if (strcmp(argv[1],"RR")==0) {
@@ -1270,13 +1293,19 @@ int main(int argc, char** argv) {
 		}
 		if (strcmp(argv[1], "FCFS") == 0)
 		{
-			outfile=argv[3];
-			analysis.FCFS(alljobs, output, numberOfJobs, dumpTime, outfile);
+			if(argc>=3){
+			   outfile="out.file";
+			}else
+				outfile=argv[3];
+			analysis.FCFS(alljobs, output, numberOfJobs);
 		}
 		else if (strcmp(argv[1], "RR") == 0)
 		{
-			outfile=argv[4];
-			analysis.RR(alljobs, output, numberOfJobs, quantum, dumpTime,
+			if(argc>=4){
+			   outfile="out.file";
+			}else
+				outfile=argv[4];
+			analysis.RR(alljobs, output, numberOfJobs, quantum,
 					outfile);
 		}
 		filetransfer.WriteFile(outfile, output, cnt);
